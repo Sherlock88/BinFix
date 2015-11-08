@@ -178,7 +178,7 @@ for (my $unit_test_id = 0; $unit_test_id < $length; $unit_test_id++)
     my $unit_test_rel_path = $tests[$unit_test_id];
     my $unit_test = basename($unit_test_rel_path);
     my $unit_test_dir = dirname($unit_test_rel_path);
-    my $cmd = sprintf("build_gmp_unit_test \$PWD %s && ~/Research/DynamoRIO/bin64/drrun -c ~/Research/backup/BinFault/build/libbinfault.so --section .libgmp -- test-drivers/%s", $unit_test_rel_path, $unit_test);
+    my $cmd = sprintf("build_gmp_unit_test \$PWD %s && ../../../deps/DynamoRIO/bin64/drrun -c ../../binfault/libbinfault.so --section .libgmp -- test-drivers/%s", $unit_test_rel_path, $unit_test);
     my $result = system("$cmd") >> 8;
 
     if ($result == 0)

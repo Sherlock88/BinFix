@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# Set the variables
+FROM_VER=14166			# Version number of buggy version
+TO_VER=14167			# Version number of fixed version
+BUILD_DIR_PATH="../../build/genprog-subjects"
+CURDIR=$PWD
+GMP_DIR="gmp-bug-"$FROM_VER"-"$TO_VER
+GMP_ARCHIVE=$GMP_DIR".tar.gz"
+GMP_ARCHIVE_PATH=$BUILD_DIR_PATH/$GMP_DIR".tar.gz"
+GMP_ARCHIVE_URL="http://dijkstra.cs.virginia.edu/genprog/resources/genprog-icse2012-benchmarks/"$GMP_ARCHIVE
+
+mkdir -p $BUILD_DIR_PATH &> /dev/null
+
+if [ -z "$1" ]; then
+
+	# Download and extract buggy GMP version
+	if [ ! -f $GMP_ARCHIVE_PATH ]; then
+		echo
+		echo -e '\033[1;33m'***********************'\033[0m'
+		echo -e '\033[1;33m'* Downloading archive *'\033[0m'
+		echo -e '\033[1;33m'***********************'\033[0m'
+		wget --directory-prefix=$BUILD_DIR_PATH $GMP_ARCHIVE_URL
+	fi
+
+	if [ ! -d $BUILD_DIR_PATH/$GMP_DIR ]; then
+		echo
+		echo -e '\033[1;33m'**********************'\033[0m'
+		echo -e '\033[1;33m'* Extracting archive *'\033[0m'
+		echo -e '\033[1;33m'**********************'\033[0m'
+		tar -xvf $GMP_ARCHIVE_PATH --directory $BUILD_DIR_PATH
+	fi
+
+	# Configure and prepare Makefile
+	echo
+	echo -e '\033[1;33m'**********************'\033[0m'
+	echo -e '\033[1;33m'* Preparing Makefile *'\033[0m'
+	echo -e '\033[1;33m'**********************'\033[0m'
+	cd $BUILD_DIR_PATH/$GMP_DIR/gmp
+	make distclean
+	autoreconf --force --install
+	./configure --disable-assembly --disable-fat --disable-shared --disable-static --disable-fft
+
+	# Replace the fixed version(s) with the buggy one(s)
+	# from $GMP_DIR/diffs to appropriate location(s)
+	echo
+	echo -e '\033[1;33m'***********************'\033[0m'
+	echo -e '\033[1;33m'* Replace source code *'\033[0m'
+	echo -e '\033[1;33m'***********************'\033[0m'
+
+	# echo "Replace the fixed version(s) with the buggy one(s) from $GMP_DIR/diffs to appropriate location(s)"
+	# read -p "Press any key to continue once you are done." -n1 -s
+	function replace_annotated_source() {
+		annotated_source_path="$( cut -d '/' -f 3- <<< "$1" )";
+		original_source_path="$( echo $annotated_source_path | sed "s/-.*//" )"
+		rm -f "$original_source_path"
+		cp ../diffs/"$annotated_source_path" "$original_source_path"
+	}
+
+	export -f replace_annotated_source
+	find ../diffs -name "*-$FROM_VER" -print | xargs bash -c 'replace_annotated_source "$@"' _
+
+	# Build the buggy version of gmp
+	echo -e "\n"
+	echo -e '\033[1;33m'**********************'\033[0m'
+	echo -e '\033[1;33m'* Build the target *'\033[0m'
+	echo -e '\033[1;33m'**********************'\033[0m'
+	make
+
+	# Get convinced that the build works
+	if [ -f ".libs/libgmp.a" ]; then
+		echo
+		echo -e '\033[0;32m'********************'\033[0m'
+		echo -e '\033[0;32m'* Build succeeded! *'\033[0m'
+		echo -e '\033[0;32m'********************'\033[0m'
+	else
+		echo
+		echo -e '\033[0;31m'*****************'\033[0m'
+		echo -e '\033[0;31m'* Build failed! *'\033[0m'
+		echo -e '\033[0;31m'*****************'\033[0m'
+	fi
+
+fi
+
+# Run test suite to generate execution trace
+cd $CURDIR/$BUILD_DIR_PATH/$GMP_DIR
+cp $CURDIR/build_gmp_unit_test $CURDIR/gmp_run_test_suite.pl .
+perl gmp_run_test_suite.pl
