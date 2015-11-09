@@ -171,7 +171,19 @@ my @tests = (
 
 my $length = scalar @tests;
 my $test_report = 'test-drivers/test-report.txt';
-system("mkdir test-drivers &> /dev/null");
+
+# Redirecting mkdir output to /dev/null is causing weird
+# issues on some systems. The system() call returns early,
+# either prior to test-drivers directory getting created or
+# prior to file-system view getting refreshed. As a side-effect,
+# subsequent open() fails for the first time. It works next time
+# onwards. The soultion is either to introduce a sleep(1)
+# between system() and open() or not redirecting the output to
+# /dev/null. While the first solution is intuitive, the second one
+# is not. To suppress mkdir output, '-p' switch has been used
+# instead of redirecting it to /dev/null.
+# Deprecated, was failing randomly: system("mkdir test-drivers &> /dev/null");
+system("mkdir -p test-drivers");
 open(my $test_report_handle, '>', $test_report) or die "Could not open file '$test_report' $!";
 
 for (my $unit_test_id = 0; $unit_test_id < $length; $unit_test_id++)
@@ -184,12 +196,12 @@ for (my $unit_test_id = 0; $unit_test_id < $length; $unit_test_id++)
 
     if ($result == 0)
     {
-        print "PASS: $unit_test\n";
+        print "[",$unit_test_id + 1,"/",$length,"] PASS: $unit_test\n";
         print $test_report_handle "PASS: $unit_test\n";
     }
     else
     {
-        print "FAIL: $unit_test\n";
+        print "[",$unit_test_id + 1,"/",$length,"] FAIL: $unit_test\n";
         print $test_report_handle "FAIL: $unit_test\n";
     }
 }
