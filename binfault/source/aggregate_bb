@@ -1,0 +1,44 @@
+#!/bin/bash
+
+TEST_SUITE_REPORT=$1
+TEST_SUITE_EXECUTION_DUMP_DIR=`dirname $TEST_SUITE_REPORT`
+oldIFS=${IFS}
+IFS=": "
+test_count=1
+passed_test_count=0
+failed_test_count=0
+passed_bb_count=0
+failed_bb_count=0
+
+declare -A test_suite_result
+while read -a test_and_result
+do 
+	test_suite_result["${test_and_result[1]}"]="${test_and_result[0]}"
+done < $TEST_SUITE_REPORT
+
+rm -f $TEST_SUITE_EXECUTION_DUMP_DIR/all_passed_tests.bb_addr
+rm -f $TEST_SUITE_EXECUTION_DUMP_DIR/all_failed_tests.bb_addr
+
+for test in ${!test_suite_result[@]}
+do
+	test_result=${test_suite_result[${test}]}
+	echo "[$test_count/${#test_suite_result[@]}] ${test} -> $test_result"
+	bb_count=`grep -c TAG $TEST_SUITE_EXECUTION_DUMP_DIR/$test".dump"`
+
+	if [ $test_result == "PASS" ]; then
+		let passed_test_count=$passed_test_count+1
+		grep TAG $TEST_SUITE_EXECUTION_DUMP_DIR/$test".dump" | awk '{ print $2 }' >> $TEST_SUITE_EXECUTION_DUMP_DIR/all_passed_tests.bb_addr
+		passed_bb_count=$(($passed_bb_count + $bb_count))
+	else
+		failed_test_count=`expr $failed_test_count + 1`
+		grep TAG $TEST_SUITE_EXECUTION_DUMP_DIR/$test".dump" >> $TEST_SUITE_EXECUTION_DUMP_DIR/all_failed_tests.bb_addr
+		failed_bb_count=$(($failed_bb_count + $bb_count))
+	fi
+
+	test_count=$(($test_count + 1))
+done
+
+echo -e "\nPassed:" $passed_test_count", Failed:" $failed_test_count
+echo -e "Passed BB#:" $passed_bb_count", Failed BB#:" $failed_bb_count "\n"
+
+IFS=${oldIFS}

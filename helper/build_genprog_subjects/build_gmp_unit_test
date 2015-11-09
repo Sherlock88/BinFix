@@ -5,22 +5,22 @@ UNIT_TEST_PATH=$2
 UNIT_TEST=`basename $UNIT_TEST_PATH`
 UNIT_TEST_SRC_DIR=`dirname $UNIT_TEST_PATH`
 TEST_DRIVER_DIR=$GMP_ROOT_DIR/test-drivers
-UNIT_TEST_TGT_DIR=$TEST_DRIVER_DIR/$UNIT_TEST
+UNIT_TEST_TGT_DIR=$TEST_DRIVER_DIR/$UNIT_TEST_SRC_DIR/$UNIT_TEST
 DEBUG=
 
 if [ -z "$DEBUG" ]; then
-	UNIT_TEST_TGT_DIR=$TEST_DRIVER_DIR
+	UNIT_TEST_TGT_DIR=$TEST_DRIVER_DIR/$UNIT_TEST_SRC_DIR
 fi
 cd $GMP_ROOT_DIR/gmp/tests
 make libtests.la &> /dev/null
-mkdir $TEST_DRIVER_DIR &> /dev/null
+mkdir -p $UNIT_TEST_TGT_DIR
 cd $TEST_DRIVER_DIR
 if [ -n "$DEBUG" ]; then
-	mkdir $UNIT_TEST &> /dev/null
+	mkdir -p $UNIT_TEST
 fi
 
 if [ ! -d libgmp ]; then
-	mkdir libgmp &> /dev/null
+	mkdir -p libgmp
 	cd libgmp
 	cp $GMP_ROOT_DIR/gmp/.libs/libgmp.a .
 	ar -x libgmp.a
@@ -28,7 +28,7 @@ if [ ! -d libgmp ]; then
 fi
 
 if [ ! -d libtest ]; then
-	mkdir libtest &> /dev/null
+	mkdir -p libtest
 	cd libtest
 	cp $GMP_ROOT_DIR/gmp/tests/.libs/libtests.a .
 	ar -x libtests.a
@@ -36,7 +36,7 @@ if [ ! -d libtest ]; then
 fi
 
 if [ ! -d libgmp_r ]; then
-	mkdir libgmp_r
+	mkdir -p libgmp_r
 	cd libgmp
 	ls -lb *.o | awk '{ print $9 }' | xargs -I {} objcopy --rename-section .text=.libgmp {} ../libgmp_r/{}
 	cd ..
