@@ -15,6 +15,7 @@ while read -a test_and_result
 do 
 	test_suite_result["${test_and_result[1]}"]="${test_and_result[0]}"
 done < $TEST_SUITE_REPORT
+IFS=${oldIFS}
 
 rm -f $TEST_SUITE_EXECUTION_DUMP_DIR/all_passed_tests.bb_addr
 rm -f $TEST_SUITE_EXECUTION_DUMP_DIR/all_failed_tests.bb_addr
@@ -41,4 +42,5 @@ done
 echo -e "\nPassed:" $passed_test_count", Failed:" $failed_test_count
 echo -e "Passed BB#:" $passed_bb_count", Failed BB#:" $failed_bb_count "\n"
 
-IFS=${oldIFS}
+sort $TEST_SUITE_EXECUTION_DUMP_DIR/all_passed_tests.bb_addr | uniq -c > $TEST_SUITE_EXECUTION_DUMP_DIR/all_passed_tests.bb_freq
+sort $TEST_SUITE_EXECUTION_DUMP_DIR/all_failed_tests.bb_addr | uniq -c > $TEST_SUITE_EXECUTION_DUMP_DIR/all_failed_tests.bb_freq
