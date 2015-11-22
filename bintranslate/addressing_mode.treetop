@@ -1,0 +1,44 @@
+# 80x86 provides 17 distinct addressing modes:
+# http://www.ic.unicamp.br/~celio/mc404s2-03/addr_modes/intel_addr.html
+
+
+grammar AddressingMode
+
+	rule variable
+		'[' register space integer ']' <RegisterOffsetMode> /
+		'[' register ']' <RegisterIndirectMode> /
+		'[' integer ']' <AbsoluteMode> /
+		register <RegisterMode>
+	end
+
+
+	rule register
+		(
+			'rax' <IntegerRegisterLiteral> /
+			'eax' <IntegerRegisterLiteral> /
+			'ax' <IntegerRegisterLiteral> /
+			'ah' <IntegerRegisterLiteral> /
+			'al' <IntegerRegisterLiteral> /
+			'rbp' <IntegerRegisterLiteral> /
+			'esi' <IntegerRegisterLiteral> /
+			'edi' <IntegerRegisterLiteral>
+		)
+	end
+
+
+	rule integer
+		(
+			('+' / '-')* space '0x' [0-9]+ <IntegerLiteral> /
+			('+' / '-')* space '0X' [0-9]+ <IntegerLiteral> /
+			('+' / '-')* space [0-9]+ 'h' <IntegerLiteral> /
+			('+' / '-')* space [0-9]+ 'H' <IntegerLiteral> /
+			('+' / '-')* space [0-9]+ <IntegerLiteral>
+		)
+	end
+
+
+	rule space
+		[\s]*
+	end
+
+end

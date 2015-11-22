@@ -1,0 +1,152 @@
+grammar BinFix_DSL
+
+	rule dsl
+		(
+			jump_command /
+			assignment_command /
+			expression /
+			function
+		)
+	end
+
+
+	rule jump_command
+		expression space jump_keyword space integer
+	end
+
+
+	rule assignment_command
+		variable space assignment_operator space expression
+	end
+
+
+	rule jump_keyword
+		"jump" <JumpLiteral>
+	end
+
+
+	rule expression
+		(
+			'(' expression ')' /
+			compound_expression /
+			primary_expression
+		) <ExpressionLiteral>
+	end
+
+
+	rule compound_expression
+		primary_expression space compound_operator space expression
+	end
+
+
+	rule primary_expression
+		(
+			arithmetic_expression space logical_operator space primary_expression /
+			arithmetic_expression /
+			logical_expression
+		)
+	end
+
+
+	rule arithmetic_expression
+		(
+			operand space arithmetic_operator space expression /
+			operand
+		)
+	end
+
+
+	rule logical_expression
+		(
+			operand space logical_operator space arithmetic_expression
+		)
+	end
+
+
+	rule function
+		(identifier space '(' space ')' / identifier '(' expression ')')
+	end
+
+
+	rule arithmetic_operator
+		(
+			'+' <ArithmeticOperatorLiteral> /
+			'-' <ArithmeticOperatorLiteral> /
+			'*' <ArithmeticOperatorLiteral> / 
+			'/' <ArithmeticOperatorLiteral>
+		)
+	end
+
+
+	rule compound_operator
+		(
+			'&' <CompoundOperatorLiteral> /
+			'|' <CompoundOperatorLiteral>
+		)
+	end
+
+
+	rule logical_operator
+		(
+			'==' <LogicalOperatorLiteral> /
+			'!=' <LogicalOperatorLiteral> /
+			'>' <LogicalOperatorLiteral> /
+			'<' <LogicalOperatorLiteral> /
+			'>=' <LogicalOperatorLiteral> /
+			'<=' <LogicalOperatorLiteral>
+		)
+	end
+
+
+	rule assignment_operator
+		"=" <AssignmentOperatorLiteral>
+	end
+
+
+	rule operand
+		(
+			variable /
+			register /
+			integer
+		) <OperandLiteral>
+	end
+
+
+	rule register
+		(
+			'rax' <RegisterLiteral> /
+			'eax' <RegisterLiteral> /
+			'ax' <RegisterLiteral> /
+			'ah' <RegisterLiteral> /
+			'al' <RegisterLiteral>
+		)
+	end
+
+
+	rule identifier
+		[a-zA-Z\=\*] [a-zA-Z0-9_\=\*]*
+	end
+
+
+	rule variable
+		'[' register space arithmetic_operator space integer ']' <VariableLiteral> /
+		'[' register ']' <VariableLiteral> /
+		'[' integer ']' <VariableLiteral> 
+	end
+
+
+	rule integer
+		(
+			'0x' [0-9]+ <IntegerLiteral> /
+			'0X' [0-9]+ <IntegerLiteral> /
+			[0-9]+ 'h' <IntegerLiteral> /
+			[0-9]+ 'H' <IntegerLiteral> /
+			[0-9]+ <IntegerLiteral>
+		)
+	end
+
+
+	rule space
+		[\s]
+	end
+end
