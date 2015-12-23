@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
-
+#include <stack>
 using namespace std;
 
 #define BUFSIZE 512
@@ -17,6 +17,11 @@ using namespace std;
 #define DISPLAY_STRING(msg) dr_printf("%x\n", msg)
 #endif
 
+stack<app_pc> app_pc_list;
+app_pc instr_target_addr;
+bool mark_start = false;
+app_pc mark_address = 0x0;
+int instruction_length = 0;
 
 struct App_Info
 {
@@ -30,6 +35,7 @@ struct App_Info
 struct Parsed_Args
 {
     char* exec_section = NULL;
+    app_pc target_address;
 };
 
 
@@ -65,19 +71,27 @@ Parsed_Args parse_cmd_line_args(int argc, const char *argv[])
 
     for(i = 1; i < argc; i++)
     {
-        if(!strcmp(argv[i], "--section"))
+        if(!strcmp(argv[i], "--section") || !strcmp(argv[i], "--address"))
         {
             i++;
             if(i >= argc)
                 show_usage();
-            else
+            else if(!strcmp(argv[i-1], "--section"))
             {
                 parsed_args.exec_section = (char*)malloc(sizeof(argv[i]) + 1);
                 if(!parsed_args.exec_section)
                     abort();
                 strcpy(parsed_args.exec_section, argv[i]);
             }
-        }        
+            else if(!strcmp(argv[i-1], "--address"))
+            {
+                parsed_args.target_address = (app_pc)strtol(argv[i], NULL, 0);
+                
+                if(DEBUG)
+                    dr_printf("Target Virtual Address: %x\n", parsed_args.target_address);
+            }
+        } 
+
     }
 
     if(!parsed_args.exec_section)
@@ -137,6 +151,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     struct Parsed_Args parsed_args = parse_cmd_line_args(argc, argv);
     app_info = get_app_info();
     get_pc_range(parsed_args.exec_section);
+    instr_target_addr = parsed_args.target_address;
     gen_dump();
     register_hook();
 }
@@ -149,31 +164,73 @@ static void event_exit(void)
 
 static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
 {
+    instr_t *instr_first, *instr_last;
+    app_pc instr_first_addr, instr_last_addr;
+    bool found_target;
     app_pc pc_current = dr_fragment_app_pc(tag);
+    //DISPLAY_STRING(instr_target_addr);
+
     if(pc_current >= app_info.pc_start && pc_current <= app_info.pc_end)
-        instrlist_disassemble(drcontext, (app_pc)tag, bb, app_info.dump_instr_file_handle);
-    
-    /*for (instr = instrlist_first(bb); instr != instrlist_last(bb); instr = next)
     {
-        next = instr_get_next(instr);
-    }*/
 
-    /*
-    map<int,int> m;
-    int i;
-    bool success;
-    for (i=0; i<5; i++) {
-        m[i] = i;
-    }
-
-    for (i=0; i<5; i++) {
-        cout << m[i];
-        if (m[i] != i) {
-            success = false;
+        if(!mark_start)
+        {
+            mark_start = true;
+            if(pc_current == mark_address + instruction_length)
+            {
+                ;
+            }
+            else
+            {
+                //cout<<app_pc_list.size()<<endl;
+                //DISPLAY_STRING(pc_current);
+                app_pc_list.push(pc_current);
+            }  
         }
-    }
-    */
 
+        instrlist_disassemble(drcontext, (app_pc)tag, bb, app_info.dump_instr_file_handle);
+
+        instr_first = instrlist_first_app(bb);
+        instr_last = instrlist_last_app(bb);
+
+        if(instr_target_addr >= instr_get_app_pc(instr_first) && instr_target_addr <= instr_get_app_pc(instr_last))
+            DISPLAY_STRING(app_pc_list.top()); 
+            //found_target = true;
+
+        //if(found_target)
+           // DISPLAY_STRING(app_pc_list.top());   
+
+        if(instr_is_call(instr_last))
+        {
+            instr_first_addr = opnd_get_pc(instr_get_target(instr_last));
+            if(instr_first_addr >= app_info.pc_start && instr_first_addr <= app_info.pc_end)
+            {
+                //DISPLAY_STRING(instr_first_addr);
+                app_pc_list.push(instr_first_addr);
+            }    
+            else
+            {
+                mark_address = instr_get_app_pc(instr_last);
+                instruction_length = instr_length(drcontext, instr_last);
+                //DISPLAY_STRING(mark_address);
+            }
+                
+        }
+        else if(instr_is_return(instr_last))
+        {
+            //DISPLAY_STRING(instr_get_app_pc(instr_last));
+            //if(app_pc_list.size() == 0)
+            //DISPLAY_STRING(app_pc_list.top());
+            app_pc_list.pop();
+        }
+           
+    }
+    else 
+    {
+        if(mark_start)
+            mark_start = false;
+    }
+   
     return DR_EMIT_DEFAULT;
 }
 
