@@ -26,7 +26,8 @@ if (NOT DynamoRIO_FOUND)
 endif(NOT DynamoRIO_FOUND)
 
 # Add the DR clinet as a SHARED library to the project
-add_library(bininject SHARED source/bininject.cpp source/binfix_patch.cpp)
+# add_library(bininject SHARED source/bininject.cpp source/binfix_patch.cpp)
+add_library(bininject SHARED source/bininject.cpp)
 
 # Configure DR client
 configure_DynamoRIO_client(bininject)

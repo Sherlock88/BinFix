@@ -1,0 +1,20 @@
+#!/bin/bash
+
+SUBJECT=$(basename $(ls -b *.dis | grep -v *.o.dis) .dis)
+
+assert-equal () {
+	# Discard all but the last line to suppress DynamoRIO log
+    diff -q <(${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1) <(echo -ne "$2\n") > /dev/null
+}
+
+case "$1" in
+    1)
+        assert-equal "1 2" "1"
+        ;;
+    2)
+        assert-equal "2 2" "0"
+        ;;
+    3)
+        assert-equal "2 1" "0"
+        ;;
+esac

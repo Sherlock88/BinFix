@@ -1,0 +1,5 @@
+[:patch_addr, 0x400521]
+[:assign, L2, [:cexp, (L1 - 2) + (L2 - 3)]]
+
+[:patch_addr, 0x500124]
+[:if, [:cexp, (L2 + (L3 - 0x500)) > L3], [:cond_jmp, 0x500063]]

@@ -13,7 +13,6 @@ DYNAMORIO_ARCHIVE_PATH = $(BUILD_DIR)/$(DEPENDENCY_DIR)/$(DYNAMORIO_ARCHIVE)
 DYNAMORIO_DIR = $(DEPENDENCY_DIR)/DynamoRIO
 BINFAULT_BUILD_DIR = $(BUILD_DIR)/binfault
 BINVAR_BUILD_DIR = $(BUILD_DIR)/binvar
-BININJECT_BUILD_DIR = $(BUILD_DIR)/bininject
 
 #######################################################
 # Build all
@@ -58,12 +57,3 @@ binvar: $(BINVAR_BUILD_DIR)
 
 $(BINVAR_BUILD_DIR): 
 	mkdir -p $(BUILD_DIR)/binvar && cd $(BUILD_DIR)/binvar && cmake $(BF_DIR)/binvar
-
-#######################################################
-# BinInject - The patch injection module
-#######################################################
-bininject: $(BININJECT_BUILD_DIR)
-	cd $(BUILD_DIR)/bininject && make
-
-$(BININJECT_BUILD_DIR): 
-	mkdir -p $(BUILD_DIR)/bininject && cd $(BUILD_DIR)/bininject && cmake $(BF_DIR)/bininject

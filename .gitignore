@@ -1,4 +1,6 @@
 *~
 build
 deps
+dr_patch.cpp
 binfix_patch.cpp
+binfix_cexp_*

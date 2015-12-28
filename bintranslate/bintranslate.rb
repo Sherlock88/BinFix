@@ -4,6 +4,7 @@ require_relative 'addressing_mode_parser'
 require_relative 'translate_variables'
 require_relative 'code_generator'
 require_relative 'write_output'
+require_relative 'helper'
 
 
 debug = true
@@ -32,11 +33,17 @@ translate_var.show_variables
 
 
 # Process DSL instructions
+puts "\n******************************** Compilation *******************************\n"
 code_generator = CodeGenerator.new(variables, write_output)
 File.readlines(command_line_arguments[:program_file]).each do |dsl_command|
-	dsl_command = YAML.load dsl_command.gsub! ':', ''
-	puts "\n****************************** Compilation Begins ******************************\n"
-	code_generator.compile dsl_command
+	# Strip off trailing newline and whitespaces
+	dsl_command.strip!
+
+	unless dsl_command.empty?
+		dsl_command = YAML.load dsl_command.gsub! ':', ''
+		puts "\n" + green(dsl_command) + ">\n"
+		code_generator.compile dsl_command
+	end
 end
 
 

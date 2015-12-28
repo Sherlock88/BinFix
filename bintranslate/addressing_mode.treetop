@@ -28,8 +28,8 @@ grammar AddressingMode
 
 	rule integer
 		(
-			('+' / '-')* space '0x' [0-9]+ <IntegerLiteral> /
-			('+' / '-')* space '0X' [0-9]+ <IntegerLiteral> /
+			('+' / '-')* space '0x' [0-9a-f]+ <IntegerLiteral> /
+			('+' / '-')* space '0X' [0-9A-F]+ <IntegerLiteral> /
 			('+' / '-')* space [0-9]+ 'h' <IntegerLiteral> /
 			('+' / '-')* space [0-9]+ 'H' <IntegerLiteral> /
 			('+' / '-')* space [0-9]+ <IntegerLiteral>

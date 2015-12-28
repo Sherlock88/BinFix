@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <sys/mman.h>
 
 using namespace std;
 
@@ -11,7 +12,7 @@ extern void inject_binfix_patch(void *drcontext, instr_t *next, instrlist_t *bb)
 #define BUFSIZE 512
 #define SUCCESS 0
 #define FAILURE 1
-#define DEBUG   0
+#define DEBUG   1
 
 #ifdef WINDOWS
 #define DISPLAY_STRING(msg) dr_messagebox(msg)
@@ -59,7 +60,7 @@ App_Info get_app_info()
 }
 
 
-Parsed_Args parse_cmd_line_args(int argc, const char *argv[])
+/*Parsed_Args parse_cmd_line_args(int argc, const char *argv[])
 {
     int i;
 
@@ -76,7 +77,7 @@ Parsed_Args parse_cmd_line_args(int argc, const char *argv[])
     }
 
     return parsed_args;
-}
+}*/
 
 
 void gen_dump()
@@ -98,9 +99,13 @@ void register_hook()
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
-    parsed_args = parse_cmd_line_args(argc, argv);
+    // parsed_args = parse_cmd_line_args(argc, argv);
     app_info = get_app_info();
-    gen_dump();
+    if(DEBUG)
+    {
+        disassemble_set_syntax(DR_DISASM_INTEL);
+        gen_dump();
+    }
     register_hook();
 }
 
@@ -115,13 +120,16 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
     app_pc pc_current = dr_fragment_app_pc(tag);
     instr_t *in, *instr, *next;
     
-    for (instr = instrlist_first(bb); instr != instrlist_last(bb); instr = next)
+    //for (instr = instrlist_first(bb); instr != instrlist_last(bb); instr = next)
+    for (instr = instrlist_first(bb); instr != NULL; instr = next)
     {
         next = instr_get_next(instr);
-        app_pc cur_pc = instr_get_app_pc(next);
+        app_pc cur_pc = instr_get_app_pc(instr);
 
-        if(cur_pc == (app_pc)parsed_args.patch_injection_address)
-            inject_binfix_patch(drcontext, next, bb);
+        //if(cur_pc == (app_pc)parsed_args.patch_injection_address)
+        //    inject_binfix_patch(drcontext, next, bb);
+
+        #include "dr_patch.cpp"
     }
 
     if(DEBUG)
