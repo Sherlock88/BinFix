@@ -4,3 +4,7 @@ deps
 dr_patch.cpp
 binfix_patch.cpp
 binfix_cexp_*
+__pycache__/
+*.bak
+TAGS
+*.log
