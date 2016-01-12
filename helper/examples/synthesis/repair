@@ -1,0 +1,11 @@
+#!/bin/bash   
+set -euo pipefail
+
+arguments="$@"
+
+angelix src test.c oracle 2 \
+        --assert assert.json \
+        --binfix \
+        --synthesis-levels mixed-conditional \
+        --synthesis-only angelic-forest.json \
+        $arguments
