@@ -23,6 +23,9 @@ module AddressingMode
 	end
 
 	class AbsoluteMode < Treetop::Runtime::SyntaxNode
+		def addressingMode
+			"AbsoluteMode"
+		end
 	end
 
 end

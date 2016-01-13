@@ -1,2 +1,2 @@
-L1:[rbp-0x8]:int
-L2:[rbp-0x4]:int
+L1:[rbp-0x8]:4:int
+L2:[rbp-0x4]:4:int

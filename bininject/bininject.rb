@@ -3,6 +3,8 @@ require 'pathname'
 require_relative 'helper'
 
 
+DEBUG = true
+DISABLE_INSTRUMENTATION = false
 abort("Usage: bininject <binary> [arguments]") if ARGV.length == 0
 program_file = ARGV[0]
 arguments = ARGV[1..ARGV.length].map{|arg| " " + arg}.join
@@ -18,7 +20,7 @@ end
 
 
 # Build bininject DR client
-puts "\n\n************************* Building injection client ************************\n"
+puts "\n\n************************* 1.Building injection client ************************\n"
 # If this script is called from another script/Makefile, bash sets the working directory
 # to be the same as that of parent/caller script. It breaks any paths relative to the caller,
 # e.g. path to the executable. There are a couple of workarounds:
@@ -36,7 +38,7 @@ system("make")
 
 
 # Patch the buggy executable on the fly
-puts "\n\n****************************** Applying patch ******************************\n"
+puts "\n\n****************************** 2.Applying patch ******************************\n"
 # Know CPU architecture: 32 or 64
 arch = `getconf LONG_BIT`
 arch.strip!
@@ -59,9 +61,31 @@ program_path = program_file
 program_path = File.join(working_dir, program_path) unless (Pathname.new program_path).absolute?
 
 # Execute the buggy binary with the patch injected
-cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -c ../build/bininject/libbininject.so -- " + program_path
+# Output from binary will appear on console
+# oracle is expected to parse the output to decide on outcome, e.g.SUCCESS/FAILURE
+cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -c ../build/bininject/libbininject.so "
+
+# Optionally disables instrumentation, comes handy to collect unmodified execution trace
+cmd_patch_binary = DISABLE_INSTRUMENTATION ? (cmd_patch_binary + "--disable_instrumentation 1 ") : (cmd_patch_binary + "--disable_instrumentation 0 ")
+cmd_patch_binary = cmd_patch_binary + "-- " + program_path
+
+# Pass arguments to the binary, if any
 cmd_patch_binary = cmd_patch_binary + arguments unless arguments.nil?
-puts green(">> " + cmd_patch_binary)
+
+# Redirect stderr to stdout
+cmd_patch_binary = cmd_patch_binary + " 2>&1" if DEBUG
+
+# Show and trigger the command
+puts green(">> " + cmd_patch_binary + "\n")
 ret = system(cmd_patch_binary)
-# puts red("Patch execution unsuccessful, non-zero exit status") if ret == false
-# puts red("Patch execution failed, non-zero exit status") if ret.nil?
+
+# Prompt in case of failure
+puts red("[FAILURE]: Non-zero exit status") if !ret
+puts red("[FAILURE]: Command execution failed") if ret.nil?
+
+# Returns process status, relevant in case of segmentation fault
+# $? is an instance of <Process:Status> class
+# http://ruby-doc.org/core-2.2.0/Process/Status.html
+exit_status = DEBUG ? $?.exitstatus : $?.to_i
+print "[DEBUG]: Process exit code: ", $?.exitstatus, ", POSIX status code:", $?.to_i if DEBUG
+exit exit_status
