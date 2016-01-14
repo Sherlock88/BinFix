@@ -41,7 +41,7 @@ class TranslateVar
 						if(@debug)
 							p operand.elements
 						end
-						dr_code = translateRegisterOffsetMode var_name, operand.elements
+						dr_code = translateRegisterOffsetMode var_name, operand.elements, var_size
 
 					when "RegisterMode"
 						if(@debug)
@@ -71,7 +71,7 @@ class TranslateVar
 	end
 
 
-	def translateRegisterOffsetMode(var_name, tokens)
+	def translateRegisterOffsetMode(var_name, tokens, var_size)
 		if var_size == 4
 			"opnd_t " + var_name + " = OPND_CREATE_MEM32(DR_REG_" + tokens[0].text_value.upcase + ", " + tokens[1].text_value + ");"
 		else
