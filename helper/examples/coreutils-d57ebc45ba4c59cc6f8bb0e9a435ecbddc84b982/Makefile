@@ -25,6 +25,7 @@ help:
 
 all: $(BUILD_DIR)
 	cd $(BUILD_DIR); \
+	git checkout -b buggy d57ebc45ba4c59cc6f8bb0e9a435ecbddc84b982; \
 	./bootstrap; \
 	./configure; \
 	make
@@ -34,7 +35,6 @@ all: $(BUILD_DIR)
 $(BUILD_DIR):
 	@ printf ${YELLOW}"\n********************* Compile Binary *********************"${NC}"\n"
 	git clone git://git.sv.gnu.org/coreutils $(BUILD_DIR)
-	git checkout -b buggy d57ebc45ba4c59cc6f8bb0e9a435ecbddc84b982
 
 
 # To keep test running even in case of failure:
