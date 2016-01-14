@@ -1,2 +1,2 @@
-[:patch_addr, 0x401ff6]
+[:patch_addr, 0x401fef]
 [:if, [:cexp, L2 < L1], 0x402012]

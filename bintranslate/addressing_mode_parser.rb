@@ -12,7 +12,7 @@ class Parser
   @@parser = AddressingModeParser.new
   
   # Parse an input string and return a Ruby array like:
-  #   [:this, :is, [:a, :test]]
+  # [:this, :is, [:a, :test]]
   def self.parse(data)
     
     # Pass the data over to the parser instance

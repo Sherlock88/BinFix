@@ -1,2 +1,2 @@
-L1:[rip+0x208360]:int
-L2:[rip+0x20835c]:int 
+L1:[0x60a340]:8:unsigned int
+L2:[0x60a347]:8:unsigned int 

@@ -1,4 +1,3 @@
-L1:[rbp-0x20]:int
-L2:[rbp-0x18]:int
-L3:[rbp-0x4]:int
-L4:[rbp-0x14]:int
+L1:[rbp-0x20]:4:int
+L2:[rbp-0x18]:8:int
+L3:[0x60a340]:8:int

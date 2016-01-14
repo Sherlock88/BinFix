@@ -4,7 +4,8 @@ SUBJECT=src/cut
 
 assert-equal () {
 	# Discard all but the last line to suppress DynamoRIO log
-    diff -q <(${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1) <(echo -ne "$2\n") > /dev/null
+    # diff -q <(${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1) <(echo -ne "$2\n") > /dev/null
+    diff <(${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1) <(echo -ne "$2\n")
 }
 
 case "$1" in
