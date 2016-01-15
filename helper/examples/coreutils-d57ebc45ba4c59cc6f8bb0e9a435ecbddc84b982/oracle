@@ -3,13 +3,15 @@
 SUBJECT=src/cut
 
 assert-equal () {
-	# Discard all but the last line to suppress DynamoRIO log
-    # diff -q <(${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1) <(echo -ne "$2\n") > /dev/null
-    diff <(${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1) <(echo -ne "$2\n")
+    #${RUNNER:-eval} ./$SUBJECT $1 &>/dev/null
+    retval=`${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1 | grep -c "fault"`
+    echo $retval
 }
 
 case "$1" in
     1)
-        assert-equal "--output-d=: -b1,1234567890- <(echo)" ""
+        touch blank
+        assert-equal "--output-d=: -b1,1234567890- blank"
+        rm -f blank
         ;;
 esac
