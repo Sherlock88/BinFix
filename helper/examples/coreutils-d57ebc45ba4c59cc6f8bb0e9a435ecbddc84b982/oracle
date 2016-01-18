@@ -3,15 +3,22 @@
 SUBJECT=src/cut
 
 assert-equal () {
-    #${RUNNER:-eval} ./$SUBJECT $1 &>/dev/null
-    retval=`${RUNNER:-eval} ./$SUBJECT $1 | tail -n 1 | grep -c "fault"`
-    echo $retval
+    ret=`${RUNNER:-eval} ./$SUBJECT $1`
+    # To detect crash, check exit code
+    # bininject.rb returns error code 139, if the program segfaults
+    # For segmentation fault, error code = 139, signal 11
+    if [ $? -eq 139 ]; then
+    	echo 1
+    else
+    	echo 0
+    fi
 }
 
 case "$1" in
     1)
         touch blank
-        assert-equal "--output-d=: -b1,1234567890- blank"
+        ret=$(assert-equal "--output-d=: -b1,1234567890- blank")
         rm -f blank
+        exit $ret
         ;;
 esac

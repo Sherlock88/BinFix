@@ -63,5 +63,10 @@ cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -c ../build/bininjec
 cmd_patch_binary = cmd_patch_binary + arguments unless arguments.nil?
 puts green(">> " + cmd_patch_binary)
 ret = system(cmd_patch_binary)
+
+# Prompt in case of failure
 puts red("[FAILURE]: Patch execution unsuccessful, non-zero exit status") if ret == false
 puts red("[FAILURE]: Patch execution failed, non-zero exit status") if ret.nil?
+
+# Returns process status, relevant in case of segmentation fault
+exit $?.to_i
