@@ -4,6 +4,7 @@ require_relative 'helper'
 
 
 REDIRECT_STDERR = false
+DISABLE_INSTRUMENTATION = true
 abort("Usage: bininject <binary> [arguments]") if ARGV.length == 0
 program_file = ARGV[0]
 arguments = ARGV[1..ARGV.length].map{|arg| " " + arg}.join
@@ -62,11 +63,19 @@ program_path = File.join(working_dir, program_path) unless (Pathname.new program
 # Execute the buggy binary with the patch injected
 # Output from binary will appear on console
 # oracle is expected to parse the output to decide on outcome, e.g.SUCCESS/FAILURE
-cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -c ../build/bininject/libbininject.so -- " + program_path
+cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -c ../build/bininject/libbininject.so "
+
+# Optionally disables instrumentation, comes handy to collect unmodified execution trace
+cmd_patch_binary = DISABLE_INSTRUMENTATION ? (cmd_patch_binary + "--disable_instrumentation 1 ") : (cmd_patch_binary + "--disable_instrumentation 0 ")
+cmd_patch_binary = cmd_patch_binary + "-- " + program_path
+
+# Pass arguments to the binary, if any
 cmd_patch_binary = cmd_patch_binary + arguments unless arguments.nil?
 
 # Redirect stderr to stdout
 cmd_patch_binary = cmd_patch_binary + " 2>&1" if REDIRECT_STDERR
+
+# Show and trigger the command
 puts green(">> " + cmd_patch_binary)
 ret = system(cmd_patch_binary)
 

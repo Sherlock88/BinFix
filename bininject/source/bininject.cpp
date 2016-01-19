@@ -27,13 +27,19 @@ struct App_Info
 } app_info;
 
 
+struct Parsed_Args
+{
+    unsigned short disable_instrumentation;
+} parsed_args;
+
+
 static void event_exit(void);
 static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
 
 
 void show_usage()
 {
-    cout << "Usage: drrun -c libbininject.so [--address <patch_injection_address>] -- <app>\n";
+    cout << "Usage: drrun -c libbininject.so [--disable_instrumentation <0|1>] -- <app>\n";
 }
 
 
@@ -49,6 +55,24 @@ App_Info get_app_info()
     app_info.app_path = app->full_path;
 
     return app_info;
+}
+
+
+Parsed_Args parse_cmd_line_args(int argc, const char *argv[])
+{
+    int i;
+    for(i = 1; i < argc; i++)
+    {
+        if(!strcmp(argv[i], "--disable_instrumentation"))
+        {
+            i++;
+            if(i >= argc)
+                show_usage();
+            else
+                parsed_args.disable_instrumentation = (short)strtoul(argv[i], NULL, 0);
+        }        
+    }
+    return parsed_args;
 }
 
 
@@ -71,6 +95,7 @@ void register_hook()
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
+    parsed_args = parse_cmd_line_args(argc, argv);
     app_info = get_app_info();
     if(DEBUG)
     {
@@ -91,12 +116,16 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
     app_pc pc_current = dr_fragment_app_pc(tag);
     instr_t *in, *instr, *next;
     
-    for (instr = instrlist_first(bb); instr != NULL; instr = next)
+    // Check if instrumentation is disabled, comes handy to collect unmodified execution trace
+    if(!parsed_args.disable_instrumentation)
     {
-        next = instr_get_next(instr);
-        app_pc cur_pc = instr_get_app_pc(instr);
+        for (instr = instrlist_first(bb); instr != NULL; instr = next)
+        {
+            next = instr_get_next(instr);
+            app_pc cur_pc = instr_get_app_pc(instr);
 
-        #include "dr_patch.cpp"
+            #include "dr_patch.cpp"
+        }
     }
 
     if(DEBUG)
