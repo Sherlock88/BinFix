@@ -3,6 +3,7 @@ require 'pathname'
 require_relative 'helper'
 
 
+REDIRECT_STDERR = false
 abort("Usage: bininject <binary> [arguments]") if ARGV.length == 0
 program_file = ARGV[0]
 arguments = ARGV[1..ARGV.length].map{|arg| " " + arg}.join
@@ -18,7 +19,7 @@ end
 
 
 # Build bininject DR client
-puts "\n\n************************* Building injection client ************************\n"
+puts "\n\n************************* 1.Building injection client ************************\n"
 # If this script is called from another script/Makefile, bash sets the working directory
 # to be the same as that of parent/caller script. It breaks any paths relative to the caller,
 # e.g. path to the executable. There are a couple of workarounds:
@@ -36,7 +37,7 @@ system("make")
 
 
 # Patch the buggy executable on the fly
-puts "\n\n****************************** Applying patch ******************************\n"
+puts "\n\n****************************** 2.Applying patch ******************************\n"
 # Know CPU architecture: 32 or 64
 arch = `getconf LONG_BIT`
 arch.strip!
@@ -61,19 +62,20 @@ program_path = File.join(working_dir, program_path) unless (Pathname.new program
 # Execute the buggy binary with the patch injected
 # Output from binary will appear on console
 # oracle is expected to parse the output to decide on outcome, e.g.SUCCESS/FAILURE
-cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -debug -c ../build/bininject/libbininject.so -- " + program_path
+cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -c ../build/bininject/libbininject.so -- " + program_path
 cmd_patch_binary = cmd_patch_binary + arguments unless arguments.nil?
 
 # Redirect stderr to stdout
-cmd_patch_binary = cmd_patch_binary + " 2>&1"
+cmd_patch_binary = cmd_patch_binary + " 2>&1" if REDIRECT_STDERR
 puts green(">> " + cmd_patch_binary)
 ret = system(cmd_patch_binary)
 
 # Prompt in case of failure
-puts red("[FAILURE]: Patch execution unsuccessful, non-zero exit status") if ret == false
+puts red("[FAILURE]: Patch execution unsuccessful, non-zero exit status") if !ret
 puts red("[FAILURE]: Patch execution failed, non-zero exit status") if ret.nil?
 
 # Returns process status, relevant in case of segmentation fault
 # $? is an instance of <Process:Status> class
 # http://ruby-doc.org/core-2.2.0/Process/Status.html
-exit $?.to_i
+exit_status = REDIRECT_STDERR ? $?.exitstatus : $?.to_i
+exit exit_status
