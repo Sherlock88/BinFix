@@ -59,8 +59,13 @@ program_path = program_file
 program_path = File.join(working_dir, program_path) unless (Pathname.new program_path).absolute?
 
 # Execute the buggy binary with the patch injected
-cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -c ../build/bininject/libbininject.so -- " + program_path
+# Output from binary will appear on console
+# oracle is expected to parse the output to decide on outcome, e.g.SUCCESS/FAILURE
+cmd_patch_binary = "../deps/DynamoRIO/bin" + arch + "/drrun -debug -c ../build/bininject/libbininject.so -- " + program_path
 cmd_patch_binary = cmd_patch_binary + arguments unless arguments.nil?
+
+# Redirect stderr to stdout
+cmd_patch_binary = cmd_patch_binary + " 2>&1"
 puts green(">> " + cmd_patch_binary)
 ret = system(cmd_patch_binary)
 
@@ -69,4 +74,6 @@ puts red("[FAILURE]: Patch execution unsuccessful, non-zero exit status") if ret
 puts red("[FAILURE]: Patch execution failed, non-zero exit status") if ret.nil?
 
 # Returns process status, relevant in case of segmentation fault
+# $? is an instance of <Process:Status> class
+# http://ruby-doc.org/core-2.2.0/Process/Status.html
 exit $?.to_i

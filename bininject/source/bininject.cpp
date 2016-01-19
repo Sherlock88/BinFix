@@ -7,8 +7,6 @@
 
 using namespace std;
 
-extern void inject_binfix_patch(void *drcontext, instr_t *next, instrlist_t *bb);
-
 #define BUFSIZE 512
 #define SUCCESS 0
 #define FAILURE 1
@@ -27,12 +25,6 @@ struct App_Info
     char* app_path;
     file_t dump_instr_file_handle;
 } app_info;
-
-
-struct Parsed_Args
-{
-    unsigned long patch_injection_address;
-} parsed_args;
 
 
 static void event_exit(void);
@@ -60,26 +52,6 @@ App_Info get_app_info()
 }
 
 
-/*Parsed_Args parse_cmd_line_args(int argc, const char *argv[])
-{
-    int i;
-
-    for(i = 1; i < argc; i++)
-    {
-        if(!strcmp(argv[i], "--address"))
-        {
-            i++;
-            if(i >= argc)
-                show_usage();
-            else
-                parsed_args.patch_injection_address = strtol(argv[i], NULL, 0);
-        }        
-    }
-
-    return parsed_args;
-}*/
-
-
 void gen_dump()
 {
     char dump_instr_file_name[BUFSIZE];
@@ -99,7 +71,6 @@ void register_hook()
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
-    // parsed_args = parse_cmd_line_args(argc, argv);
     app_info = get_app_info();
     if(DEBUG)
     {
@@ -120,14 +91,10 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
     app_pc pc_current = dr_fragment_app_pc(tag);
     instr_t *in, *instr, *next;
     
-    //for (instr = instrlist_first(bb); instr != instrlist_last(bb); instr = next)
     for (instr = instrlist_first(bb); instr != NULL; instr = next)
     {
         next = instr_get_next(instr);
         app_pc cur_pc = instr_get_app_pc(instr);
-
-        //if(cur_pc == (app_pc)parsed_args.patch_injection_address)
-        //    inject_binfix_patch(drcontext, next, bb);
 
         #include "dr_patch.cpp"
     }
@@ -137,4 +104,3 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
 
     return DR_EMIT_DEFAULT;
 }
-
