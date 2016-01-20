@@ -14,12 +14,8 @@ from runtime import Dump, Trace
 from transformation import RepairableTransformer, SuspiciousTransformer, \
                            FixInjector, TransformationError
 from testing import Tester
-from localization import Localizer
-from reduction import Reducer
 from inference import Inferrer, InferenceError
-from semfix_infer import Semfix_Inferrer, InferenceError
 from synthesis import Synthesizer
-from semfix_syn import Semfix_Synthesizer
 
 
 logger = logging.getLogger("repair")
@@ -62,249 +58,39 @@ DEFAULT_INITIAL_TESTS = 2
 sys.setrecursionlimit(10000)  # Otherwise inference.get_vars fails
 
 
-class Angelix:
+class Binfix:
 
-    def __init__(self, working_dir, src, buggy, oracle, tests, golden, asserts, lines, build, configure, config):
+    def __init__(self, working_dir, config):
         self.working_dir = working_dir
         self.config = config
-        self.test_suite = tests
         extracted = join(working_dir, 'extracted')
         os.mkdir(extracted)
 
         angelic_forest_file = join(working_dir, 'last-angelic-forest.json')
 
-        tester = Tester(config, oracle, abspath(working_dir))
-        self.run_test = tester
-        self.get_suspicious_groups = Localizer(config, lines)
-        self.reduce = Reducer(config)
-        if self.config['use_semfix_syn']:
-            self.synthesize_fix = Semfix_Synthesizer(working_dir,
-                                                     config, extracted, angelic_forest_file)
-            self.infer_spec = Semfix_Inferrer(working_dir, config, tester)
-        else:
-            self.synthesize_fix = Synthesizer(working_dir, config, extracted, angelic_forest_file)
-            self.infer_spec = Inferrer(config, tester)
-        self.instrument_for_localization = RepairableTransformer(config)
-        self.instrument_for_inference = SuspiciousTransformer(config, extracted)
-        self.apply_patch = FixInjector(config)
-
-        if not self.config['synthesis_only']:
-            validation_dir = join(working_dir, "validation")
-            shutil.copytree(src, validation_dir, symlinks=True)
-            self.validation_src = Validation(config, validation_dir, buggy, build, configure)
-            self.validation_src.configure()
-            compilation_db = self.validation_src.export_compilation_db()
-            self.validation_src.import_compilation_db(compilation_db)
-
-            frontend_dir = join(working_dir, "frontend")
-            shutil.copytree(src, frontend_dir, symlinks=True)
-            self.frontend_src = Frontend(config, frontend_dir, buggy, build, configure)
-            self.frontend_src.import_compilation_db(compilation_db)
-
-            backend_dir = join(working_dir, "backend")
-            shutil.copytree(src, backend_dir, symlinks=True)
-            self.backend_src = Backend(config, backend_dir, buggy, build, configure)
-            self.backend_src.import_compilation_db(compilation_db)
-
-            if golden is not None:
-                golden_dir = join(working_dir, "golden")
-                shutil.copytree(golden, golden_dir, symlinks=True)
-                self.golden_src = Frontend(config, golden_dir, buggy, build, configure)
-                self.golden_src.import_compilation_db(compilation_db)
-            else:
-                self.golden_src = None
-
-                self.dump = Dump(working_dir, asserts)
-                self.trace = Trace(working_dir)
-
-
-    def evaluate(self, src):
-        positive = []
-        negative = []
-        for test in self.test_suite:
-            if self.run_test(src, test):
-                positive.append(test)
-            else:
-                negative.append(test)
-        return positive, negative
+        self.infer_spec = Inferrer(config, tester)
 
 
     def generate_patch(self):
-        positive, negative = self.evaluate(self.validation_src)
-
-        self.frontend_src.configure()
-        self.instrument_for_localization(self.frontend_src)
-        self.frontend_src.build()
-        if len(positive) > 0:
-            logger.info('running positive tests for debugging')
-        for test in positive:
-            self.trace += test
-            if test not in self.dump:
-                self.dump += test
-                self.run_test(self.frontend_src, test, dump=self.dump[test], trace=self.trace[test])
-            else:
-                self.run_test(self.frontend_src, test, trace=self.trace[test])
-
-        golden_is_built = False
-        excluded = []
-
-        if len(negative) > 0:
-            logger.info('running negative tests for debugging')
-        for test in negative:
-            self.trace += test
-            self.run_test(self.frontend_src, test, trace=self.trace[test])
-            if test not in self.dump:
-                if self.golden_src is None:
-                    logger.error("golden version or assert file needed for test {}".format(test))
-                    return None
-                if not golden_is_built:
-                    self.golden_src.configure()
-                    self.golden_src.build()
-                    golden_is_built = True
-                self.dump += test
-                result = self.run_test(self.golden_src, test, dump=self.dump[test])
-                if not result:
-                    excluded.append(test)
-
-        for test in excluded:
-            logger.warning('excluding test {} because it fails in golden version'.format(test))
-            negative.remove(test)
-            self.test_suite.remove(test)
-
-        positive_traces = [(test, self.trace.parse(test)) for test in positive]
-        negative_traces = [(test, self.trace.parse(test)) for test in negative]
-        suspicious = self.get_suspicious_groups(positive_traces, negative_traces)
-        if len(suspicious) == 0:
-            logger.warning('no suspicious expressions localized')
-
         while len(negative) > 0 and len(suspicious) > 0:
             if self.config['use_semfix_syn']:
                 # prepare a clean directory
                 shutil.rmtree(join(self.working_dir, 'semfix-syn-input'),
                               ignore_errors='true')
 
-            expressions = suspicious.pop(0)
-            logger.info('considering suspicious expressions {}'.format(expressions))
-            repair_suite = self.reduce(positive_traces, negative_traces, expressions)
-            self.backend_src.restore_buggy()
-            self.backend_src.configure()
-            self.instrument_for_inference(self.backend_src, expressions)
-            self.backend_src.build()
             angelic_forest = dict()
             inference_failed = False
             for test in repair_suite:
                 try:
                     angelic_forest[test] = self.infer_spec(self.backend_src, test, self.dump[test])
+                    print " | ".join(array)
                     if len(angelic_forest[test]) == 0:
                         inference_failed = True
                         break
                 except InferenceError:
                     inference_failed = True
-                    break
-            if inference_failed:
-                continue
-            initial_fix = self.synthesize_fix(angelic_forest)
-            if initial_fix is None:
-                logger.info('cannot synthesize fix')
-                continue
-            logger.info('candidate fix synthesized')
-            self.validation_src.restore_buggy()
-            self.apply_patch(self.validation_src, initial_fix)
-            self.validation_src.build()
-            pos, neg = self.evaluate(self.validation_src)
-            if not set(neg).isdisjoint(set(repair_suite)):
-                not_repaired = list(set(repair_suite) & set(neg))
-                logger.warning("generated invalid fix (tests {} not repaired)".format(not_repaired))
-                continue
-            positive, negative = pos, neg
-
-            while len(negative) > 0:
-                counterexample = negative[0]
-                logger.info('counterexample test is {}'.format(counterexample))
-                repair_suite.append(counterexample)
-                angelic_forest[counterexample] = self.infer_spec(self.backend_src,
-                                                                 counterexample,
-                                                                 self.dump[counterexample])
-                if len(angelic_forest[counterexample]) == 0:
-                    break
-                fix = self.synthesize_fix(angelic_forest)
-                if fix is None:
-                    logger.info('cannot refine fix')
-                    break
-                logger.info('refined fix is synthesized')
-                self.validation_src.restore_buggy()
-                self.apply_patch(self.validation_src, fix)
-                self.validation_src.build()
-                pos, neg = self.evaluate(self.validation_src)
-                if not set(neg).isdisjoint(set(repair_suite)):
-                    not_repaired = list(set(repair_suite) & set(neg))
-                    logger.warning("generated invalid fix (tests {} not repaired)".format(not_repaired))
-                    break
-                positive, negative = pos, neg
-
-        if len(negative) > 0:
-            logger.warning("tests {} not repaired".format(negative))            
-            return None
-        else:
-            return self.validation_src.diff_buggy()
-
-    def dump_outputs(self):
-        self.frontend_src.configure()
-        self.instrument_for_localization(self.frontend_src)
-        self.frontend_src.build()
-        logger.info('running tests for dumping')
-        for test in self.test_suite:
-            self.dump += test
-            result = self.run_test(self.frontend_src, test, dump=self.dump[test])
-            if result:
-                logger.info('test passed')
-            else:
-                logger.info('test failed')
-        return self.dump.export()
-
-    def synthesize_from(self, af_file):
-        with open(af_file) as file:
-            data = json.load(file)
-        repair_suite = data.keys()
-
-        expressions = set()
-        for _, paths in data.items():
-           for path in paths:
-               for value in path:
-                   expr = tuple(map(int, value['expression'].split('-')))
-                   expressions.add(expr)
-
-        if not config['binfix']:
-            # we need this to extract buggy expressions:
-            self.backend_src.restore_buggy()
-            self.backend_src.configure()
-            self.instrument_for_inference(self.backend_src, list(expressions))
-
-        fix = self.synthesize_fix(af_file)
-        if fix is None:
-            logger.info('cannot synthesize fix')
-            return None
-        logger.info('fix is synthesized')
-
-        if config['synthesis_only']:
-            return fix
-        else:
-            self.validation_src.restore_buggy()
-            self.apply_patch(self.validation_src, fix)
-            self.validation_src.build()
-            positive, negative = self.evaluate(self.validation_src)
-            if not set(negative).isdisjoint(set(repair_suite)):
-                not_repaired = list(set(repair_suite) & set(negative))
-                logger.warning("generated invalid fix (tests {} not repaired)".format(not_repaired))
-                return None
-
-            if len(negative) > 0:
-                logger.info("tests {} fail".format(negative))
-                return None
-            else:
-                return self.validation_src.diff_buggy()
-
-
+                   break
+            
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser('angelix')
@@ -460,15 +246,7 @@ if __name__ == "__main__":
             logger.info('option {} = {}'.format(key, value))
 
     tool = Angelix(working_dir,
-                   src=args.src,
-                   buggy=args.buggy,
-                   oracle=abspath(args.oracle),
                    tests=args.tests,
-                   golden=args.golden,
-                   asserts=asserts,
-                   lines=args.lines,
-                   build=args.build,
-                   configure=args.configure,
                    config=config)
 
     if args.dump_only:

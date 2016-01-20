@@ -155,32 +155,17 @@ class Inferrer:
         logger.info('inferring specification for test \'{}\''.format(test))
 
         environment = dict(os.environ)
-        if self.config['klee_max_forks'] is not None:
-            environment['ANGELIX_KLEE_MAX_FORKS'] = str(self.config['klee_max_forks'])
-        if self.config['klee_max_depth'] is not None:
-            environment['ANGELIX_KLEE_MAX_DEPTH'] = str(self.config['klee_max_depth'])
-        if self.config['klee_search'] is not None:
-            environment['ANGELIX_KLEE_SEARCH'] = self.config['klee_search']
-        if self.config['klee_timeout'] is not None:
-            environment['ANGELIX_KLEE_MAX_TIME'] = str(self.config['klee_timeout'])
-        if self.config['klee_solver_timeout'] is not None:
-            environment['ANGELIX_KLEE_MAX_SOLVER_TIME'] = str(self.config['klee_solver_timeout'])
-        if self.config['klee_debug']:
-            environment['ANGELIX_KLEE_DEBUG'] = 'YES'
-        if self.config['klee_ignore_errors']:
-            environment['KLEE_DISABLE_MEMORY_ERROR'] = 'YES'
-        if self.config['use_semfix_syn']:
-            environment['ANGELIX_USE_SEMFIX_SYN'] = 'YES'
         environment['ANGELIX_KLEE_WORKDIR'] = project.dir
 
-        self.run_test(project, test, klee=True, env=environment)
+        #self.run_test(project, test, klee=True, env=environment)
 
-        smt_glob = join(project.dir, 'klee-out-0', '*.smt2')
+        smt_glob = join(project.dir, 'klee-last-0', '*.smt2')
         smt_files = glob(smt_glob)
 
         # loading dump
 
         # name -> value list
+        '''
         oracle = dict()
 
         vars = os.listdir(dump)
@@ -196,6 +181,7 @@ class Inferrer:
                 with open(file) as f:
                     content = f.read()
                 oracle[var].append(content)
+        '''
 
         # solving path constraints
 
@@ -271,6 +257,7 @@ class Inferrer:
 
             matching_path = True
 
+            '''
             for expected_variable, expected_values in oracle.items():
                 if expected_variable == 'reachable':
                     expected_reachable = set(expected_values)
@@ -305,7 +292,8 @@ class Inferrer:
 
             if not matching_path:
                 continue        
-
+            '''
+            
             solver.reset()
             solver.add(path)
 
