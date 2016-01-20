@@ -4,6 +4,7 @@ SUBJECT=src/cut
 
 assert-equal () {
     ret=`${RUNNER:-eval} ./$SUBJECT $1`
+    echo "$ret"
     # To detect crash, check exit code
     # bininject.rb returns error code 139, if the program segfaults
     # For segmentation fault, error code = 139, signal 11
@@ -18,6 +19,7 @@ case "$1" in
     1)
         touch blank
         ret=$(assert-equal "--output-d=: -b1,1234567890- blank")
+        echo "$ret"
         rm -f blank
         exit $ret
         ;;

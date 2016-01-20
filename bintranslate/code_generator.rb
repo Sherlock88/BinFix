@@ -88,6 +88,11 @@ class CodeGenerator
 		cexp_shellcode = @write_output.get_cexp_shellcode cexp, args
 		dr_code << "\tunsigned char patch[] = {#{cexp_shellcode}};"
 		dr_code << "\tmemcpy(fptr, patch, sizeof(patch));"
+		#dr_code << "\tuint sizeof_param_area = dr_prepare_for_call(drcontext, bb, instr);"
+		dr_code << "\tin = INSTR_CREATE_push(drcontext, opnd_create_reg(DR_REG_RSI));"
+		dr_code << "\tinstrlist_preinsert(bb, instr, in);"
+		dr_code << "\tin = INSTR_CREATE_push(drcontext, opnd_create_reg(DR_REG_RDI));"
+		dr_code << "\tinstrlist_preinsert(bb, instr, in);"
 		dr_insert_call = "\tdr_insert_call(drcontext, bb, instr, fptr, #{vars_used}"
 		dr_insert_call = dr_insert_call + ", #{dr_args}" if vars_used > 0
 		dr_insert_call = dr_insert_call + ");"
@@ -122,10 +127,16 @@ class CodeGenerator
 	def compile_if(dsl_command)
 		dr_code = []
 		compile_cexp dsl_command[1]
-		dr_code << "\tin = INSTR_CREATE_cmp(drcontext, opnd_create_reg(DR_REG_EAX), OPND_CREATE_INT32(0));"
+		dr_code << "\tin = INSTR_CREATE_cmp(drcontext, opnd_create_reg(DR_REG_EAX), OPND_CREATE_INT32(1));"
 		dr_code << "\tinstrlist_preinsert(bb, instr, in);"
+		dr_code << "\tin = INSTR_CREATE_pop(drcontext, opnd_create_reg(DR_REG_RDI));"
+		dr_code << "\tinstrlist_preinsert(bb, instr, in);"
+		dr_code << "\tin = INSTR_CREATE_pop(drcontext, opnd_create_reg(DR_REG_RSI));"
+		dr_code << "\tinstrlist_preinsert(bb, instr, in);"
+		#dr_code << "\tdr_cleanup_after_call(drcontext, bb, instr, sizeof_param_area);"
 		dr_code << "\tin = INSTR_CREATE_jcc(drcontext, OP_jz_short, opnd_create_pc((app_pc)#{dsl_command[2].to_s}));"
-		dr_code << "\tinstrlist_replace(bb, instr, in);"
+		dr_code << "\tinstrlist_preinsert(bb, instr, in);"
+		#dr_code << "\tinstrlist_replace(bb, instr, in);"
 		dr_code << "\tinstr_set_translation(in, cur_pc);"
 		@write_output.create_instruction dsl_command, dr_code
 	end

@@ -4,7 +4,7 @@ require_relative 'helper'
 
 
 REDIRECT_STDERR = false
-DISABLE_INSTRUMENTATION = true
+DISABLE_INSTRUMENTATION = false
 abort("Usage: bininject <binary> [arguments]") if ARGV.length == 0
 program_file = ARGV[0]
 arguments = ARGV[1..ARGV.length].map{|arg| " " + arg}.join
@@ -87,4 +87,5 @@ puts red("[FAILURE]: Patch execution failed, non-zero exit status") if ret.nil?
 # $? is an instance of <Process:Status> class
 # http://ruby-doc.org/core-2.2.0/Process/Status.html
 exit_status = REDIRECT_STDERR ? $?.exitstatus : $?.to_i
+puts $?.to_i
 exit exit_status

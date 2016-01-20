@@ -1,0 +1,45 @@
+author	Pádraig Brady <P@draigBrady.com>	2013-02-04 11:39:20 (GMT)
+committer	Pádraig Brady <P@draigBrady.com>	2013-02-04 13:55:01 (GMT)
+commit	be7932e863de07c4c7e4fc3c1db3eb6d04ba9af5 (patch) (side-by-side diff)
+tree	46160fbc21278846454f9264d82ca0d505099658
+parent	d57ebc45ba4c59cc6f8bb0e9a435ecbddc84b982 (diff)
+download	coreutils-be7932e863de07c4c7e4fc3c1db3eb6d04ba9af5.tar.gz
+cut: fix a segfault with disjoint open ended ranges
+Fixes the issue introduced in unreleased commit v8.20-60-gec48bea.
+
+* src/cut.c (set_fields): Don't access the bit array if
+we've an open ended range that's outside any finite range.
+* tests/misc/cut.pl: Add tests for this case.
+Reported by Marcel Böhme in http://bugs.gnu.org/13627
+Diffstat (more/less context) (ignore whitespace changes)
+-rw-r--r--	src/cut.c	4	
+-rwxr-xr-x	tests/misc/cut.pl	3	
+2 files changed, 6 insertions, 1 deletions
+diff --git a/src/cut.c b/src/cut.c
+index 36172c0..494aad7 100644
+--- a/src/cut.c
++++ b/src/cut.c
+@@ -530,7 +530,9 @@ set_fields (const char *fieldstr)
+   if (output_delimiter_specified
+       && !complement
+       && eol_range_start
+-      && max_range_endpoint && !is_printable_field (eol_range_start))
++      && max_range_endpoint
++      && (max_range_endpoint < eol_range_start
++          || !is_printable_field (eol_range_start)))
+     mark_range_start (eol_range_start);
+ 
+   free (rp);
+diff --git a/tests/misc/cut.pl b/tests/misc/cut.pl
+index 874c169..41e9e20 100755
+--- a/tests/misc/cut.pl
++++ b/tests/misc/cut.pl
+@@ -193,6 +193,9 @@ my @Tests =
+   ['inval6', '-f', '-1,-', {IN=>''}, {OUT=>''}, {EXIT=>1}, {ERR=>$no_endpoint}],
+   # This would evoke a segfault from 5.3.0..8.10
+   ['big-unbounded-b', '--output-d=:', '-b1234567890-', {IN=>''}, {OUT=>''}],
++  ['big-unbounded-b2a', '--output-d=:', '-b1,9-',      {IN=>'123456789'},
++    {OUT=>"1:9\n"}],
++  ['big-unbounded-b2b', '--output-d=:', '-b1,1234567890-', {IN=>''}, {OUT=>''}],
+   ['big-unbounded-c', '--output-d=:', '-c1234567890-', {IN=>''}, {OUT=>''}],
+   ['big-unbounded-f', '--output-d=:', '-f1234567890-', {IN=>''}, {OUT=>''}], 
