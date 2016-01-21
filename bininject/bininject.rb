@@ -3,7 +3,7 @@ require 'pathname'
 require_relative 'helper'
 
 
-REDIRECT_STDERR = false
+DEBUG = true
 DISABLE_INSTRUMENTATION = false
 abort("Usage: bininject <binary> [arguments]") if ARGV.length == 0
 program_file = ARGV[0]
@@ -73,19 +73,19 @@ cmd_patch_binary = cmd_patch_binary + "-- " + program_path
 cmd_patch_binary = cmd_patch_binary + arguments unless arguments.nil?
 
 # Redirect stderr to stdout
-cmd_patch_binary = cmd_patch_binary + " 2>&1" if REDIRECT_STDERR
+cmd_patch_binary = cmd_patch_binary + " 2>&1" if DEBUG
 
 # Show and trigger the command
-puts green(">> " + cmd_patch_binary)
+puts green(">> " + cmd_patch_binary + "\n")
 ret = system(cmd_patch_binary)
 
 # Prompt in case of failure
-puts red("[FAILURE]: Patch execution unsuccessful, non-zero exit status") if !ret
-puts red("[FAILURE]: Patch execution failed, non-zero exit status") if ret.nil?
+puts red("[FAILURE]: Non-zero exit status") if !ret
+puts red("[FAILURE]: Command execution failed") if ret.nil?
 
 # Returns process status, relevant in case of segmentation fault
 # $? is an instance of <Process:Status> class
 # http://ruby-doc.org/core-2.2.0/Process/Status.html
-exit_status = REDIRECT_STDERR ? $?.exitstatus : $?.to_i
-puts $?.to_i
+exit_status = DEBUG ? $?.exitstatus : $?.to_i
+print "[DEBUG]: Process exit code: ", $?.exitstatus, ", POSIX status code:", $?.to_i if DEBUG
 exit exit_status
